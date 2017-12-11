@@ -150,22 +150,6 @@ def prepareIPforScanning(IP):
     ip = ".".join(ip)
     return ip
 
-def scanIPforEsp(lastOctet):
-    _octets = getLocalIP().split(".")
-    _octets[-1] = str(lastOctet)
-    ip = ".".join(_octets)
-    nm = nmap.PortScanner()
-    result = nm.scan(ip, "8266")
-    return result
-    
-    key = ip
-    print key
-    if result["scan"][key]['hostnames'][0]['name'][:3] in [ "ESP", "MICON"]:
-        print key
-        return result["scan"][key]['hostnames'][0]['name'] + " " + key
-    else:
-        return " "
-    
 def scanNetworkWithNmap():
     espList = "" 
     nm = nmap.PortScanner()

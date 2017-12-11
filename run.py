@@ -1,42 +1,24 @@
 from gui import *
-from findESP import *
 from PyQt4.QtGui import QFont
+from uploader import *
 
-        
-class esp(object):
-    def __init__(self, ip, hostname):
-        self.ip = ip
-        self.mac = ""
-        self.type = ""
-        if hostname[:3] == "MIC":
-            _, self.type,self.mac = hostname.split("_")
-        else: 
-            self.mac = "unknown"
-            self.type = "unknown"
 
-class findEspOnlineThread(QtCore.QThread):
 
-    def __init__(self):
-        self.espOnline = ""
-        QtCore.QThread.__init__(self)
-    def __del__(self):
-        self.wait()
-    def run(self):
-        self.espOnline = scanNetworkWithNmap()
-        self.emit(QtCore.SIGNAL("updateESPLIST(QString)"),self.espOnline)
-        pass
-    
 class StartQT4(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
+        self.upload = uploader()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         
         self.setIcon()
-        
+
         self.ui.singleMode.setChecked(True)
+        self.lastState = "singleMode"
         self.ui.pushButton_2.setVisible(False)
         self.availableESP = {}
+        
+        
         self.ui.comboBox.addItem("Wait until scan ending")
         self.ui.pushButton.setText("Check")
         self.ui.pushButton_2.setText("Upload")
@@ -56,23 +38,48 @@ class StartQT4(QtGui.QMainWindow):
         self.ui.toolButton_2.setIcon(icon1)
     
     def initSignals(self):
+        self.connect(self.ui.singleMode,QtCore.SIGNAL("clicked()"), self.refreshList)
+        self.connect(self.ui.groupMode,QtCore.SIGNAL("clicked()"), self.refreshList)
+        
         self.ui.pushButton.clicked.connect(self.check)
         self.ui.pushButton_2.clicked.connect(self.uploadFile)
         self.ui.toolButton_2.clicked.connect(self.chooseFileToUpload)
         self.connect(self.ui.toolButton, QtCore.SIGNAL("clicked()"),self.updateESPlistWithThread)
         
     def updateESPlistWithThread(self):
-       
-        self.searchEspOnline = findEspOnlineThread()
-        self.connect(self.searchEspOnline, QtCore.SIGNAL("updateESPLIST(QString)"),self.zmien)
+        self.searchEspOnline = findEspOnlineThread(self.upload)
+        self.connect(self.searchEspOnline, QtCore.SIGNAL("updateESPLIST()"),self.refreshList)
         self.connect(self.searchEspOnline, QtCore.SIGNAL("finished()"), self.done)
         self.searchEspOnline.start()
     
     
     def done(self):
-        print "ok"
+        print "done"
+        self.refreshList()
+        self.updateESPlistWithThread()
+#         self.refreshList()
         
-    
+    def refreshList(self):
+        if self.ui.groupMode.isChecked() and self.lastState != "groupMode":
+            self.zmien2()
+        elif self.ui.singleMode.isChecked() and self.lastState != "singleMode":
+            self.zmien1()
+    def zmien1(self):
+        print "zmien1"
+        self.lastState = "singleMode"
+
+        self.ui.comboBox.clear()
+        for esp in self.upload.modules:
+            print esp
+            self.ui.comboBox.addItem(esp.type + " " + esp.mac,esp.ip)
+    def zmien2(self):
+        print "zmien2"
+        self.lastState = "groupMode"
+
+        self.ui.comboBox.clear()
+        
+        
+        
     def zmien(self, espOnline):
         self.ui.comboBox.clear()
         self.availableESP = {}
@@ -90,6 +97,7 @@ class StartQT4(QtGui.QMainWindow):
         self.ui.lineEdit.setText(self.binFile)
     
     def check(self):
+        
         self.espIP = self.ui.comboBox.currentText()
         self.fileLocation = self.ui.lineEdit.text()
         print self.availableESP
@@ -107,7 +115,7 @@ class StartQT4(QtGui.QMainWindow):
         
     def uploadFile(self):
         try:
-            ans = serve(self.espIP, getLocalIP(), 8266, 13000, "", self.fileLocation, command = FLASH)
+            ans = serve(self.espIP, self.getLocalIP(), 8266, 13000, "", self.fileLocation, command = FLASH)
             if ans == 1:
                 tekst = "There was some unexpected error. Please restart module and try again."
                 self.ui.textEdit.setColor(QtGui.QColor("red"))

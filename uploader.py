@@ -4,7 +4,9 @@ import os
 import hashlib
 import logging
 import sys
-from PyQt4 import QtCore
+import time
+from PyQt4 import QtCore, QtGui
+
 class esp(object):
     def __init__(self, ip, hostname, port = 8266):
         self.ip = ip
@@ -14,23 +16,25 @@ class esp(object):
         if hostname[:3] == "MIC":
             _, self.type,self.mac = hostname.split("_")
         else: 
-            self.mac = "unknown"
-            self.type = "unknown"
+            self.mac = "unknownMAC"
+            self.type = "unknownType"
     def __str__(self):
-        return self.ip
-
+        return self.type + self.ip
+            
+class findEspOnlineThread(QtCore.QThread):
+    def __init__(self, uplo):
+        self.espOnline = ""
+        self.uploader = uplo
+        QtCore.QThread.__init__(self)
+    def __del__(self):
+        self.wait()
+    def run(self):
+        self.uploader.searchModules(tag = ["ESP", "MIC"])
+        self.emit(QtCore.SIGNAL("updateESPLIST(QString)"),self.espOnline)
+        pass
+    
+    
 class uploader(object):
-    class findEspOnlineThread(QtCore.QThread):
-        def __init__(self, uplo):
-            self.espOnline = ""
-            self.uploader = uplo
-            QtCore.QThread.__init__(self)
-        def __del__(self):
-            self.wait()
-        def run(self):
-            self.uploader.searchModules(tag = ["ESP", "MIC"])
-            self.emit(QtCore.SIGNAL("updateESPLIST(QString)"),self.espOnline)
-            pass
     def __init__(self):
         self.binFile = ""
         self._module = None
@@ -216,14 +220,91 @@ class uploader(object):
         sock.close()
         logging.error("done")
         return 1
-if __name__ == "__main__":
     
     
-    upl = uploader()
-    upl.searchModules(tag = ["MIC","ESP"])
-    print len(upl.modules)
-    upl.searchModules(tag = ["MIC","ESP"])
-    print len(upl.modules)
+    
+    
+class testThread(QtCore.QThread):
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+        self.lista = []
+        self.connect(self, QtCore.SIGNAL("listChanged()"),self.toString)
+        self.connect(self, QtCore.SIGNAL("finished()"),self.done)
+    def __del__(self):
+        self.wait()
+    def done(self):
+        print"thread completed"
+    def toString(self):
+        print self.lista
 
-    print upl.types
+    def run(self):
+        print "run"
+        for i in range(100):
+            self.lista.append(i)
+            self.emit(QtCore.SIGNAL("listChanged()"))
+
+
+class test(QtCore.QObject):
+    class tthread(QtCore.QThread):
+        def __init__(self):
+            QtCore.QThread.__init__(self)
+        def __del__(self):
+            self.wait()
+        def run(self):
+            time.sleep(1)
+            print "run"
+            nm = nmap.PortScanner()
+            port = "8266"
+            tag = ["MIC", "ESP"]
+#            ipRange = self.prepareIPrange()
+            ipRange = "192.168.1.1-127"
+            nm.scan(ipRange, port)
+            for ip in nm.all_hosts():
+                item = nm.scan(ip, port) 
+                try:
+                    hostname = item['scan'][ip]["hostnames"][0]['name']
+                    if hostname[:3] in tag:
+#                         foundedModule = esp(ip,hostname)
+                        foundedModule  = ip + "&&" + hostname
+    #                     self.addToModules(foundedModule)
+    #                     self.addToTypes(foundedModule)
+                        self.emit(QtCore.SIGNAL("founded new module(QString)"), foundedModule)
+                except KeyError:
+                    continue
         
+
+    def __init__(self):
+        QtCore.QObject.__init__(self)
+        self.spis = []
+        self.poszukiwacz = self.tthread()
+        self.connect(self.poszukiwacz,QtCore.SIGNAL("founded new module(QString)"), self.updateSpis)
+        self.connect(self.poszukiwacz,QtCore.SIGNAL("finished()"), self.done)
+    
+    def updateSpis(self,nowy):
+        print "updateSpis"
+        ip,hostname = str(nowy).split("&&")
+        nowy = esp(ip,hostname)
+        if nowy not in self.spis: self.spis.append(nowy)
+        print self.spis
+    def start(self):
+        self.poszukiwacz.start()
+    def done(self):
+        self.poszukiwacz.start()
+        
+if __name__ == "__main__":
+#     
+#     upl.searchModules(tag = ["MIC","ESP"])
+#     print len(upl.modules)
+#     upl.searchModules(tag = ["MIC","ESP"])
+#     print len(upl.modules)
+# 
+#     print upl.types
+
+    app = QtGui.QApplication(sys.argv)
+    obj = test()
+    obj.start()
+    
+    sys.exit(app.exec_())
+
+   
+   

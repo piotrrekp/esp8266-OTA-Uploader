@@ -21,19 +21,6 @@ class esp(object):
     def __str__(self):
         return self.type + self.ip
             
-class findEspOnlineThread(QtCore.QThread):
-    def __init__(self, uplo):
-        self.espOnline = ""
-        self.uploader = uplo
-        QtCore.QThread.__init__(self)
-    def __del__(self):
-        self.wait()
-    def run(self):
-        self.uploader.searchModules(tag = ["ESP", "MIC"])
-        self.emit(QtCore.SIGNAL("updateESPLIST(QString)"),self.espOnline)
-        pass
-    
-    
 class uploader(object):
     def __init__(self):
         self.binFile = ""
@@ -222,27 +209,6 @@ class uploader(object):
         return 1
     
     
-    
-    
-class testThread(QtCore.QThread):
-    def __init__(self):
-        QtCore.QThread.__init__(self)
-        self.lista = []
-        self.connect(self, QtCore.SIGNAL("listChanged()"),self.toString)
-        self.connect(self, QtCore.SIGNAL("finished()"),self.done)
-    def __del__(self):
-        self.wait()
-    def done(self):
-        print"thread completed"
-    def toString(self):
-        print self.lista
-
-    def run(self):
-        print "run"
-        for i in range(100):
-            self.lista.append(i)
-            self.emit(QtCore.SIGNAL("listChanged()"))
-
 
 class test(QtCore.QObject):
     class tthread(QtCore.QThread):
@@ -264,10 +230,7 @@ class test(QtCore.QObject):
                 try:
                     hostname = item['scan'][ip]["hostnames"][0]['name']
                     if hostname[:3] in tag:
-#                         foundedModule = esp(ip,hostname)
                         foundedModule  = ip + "&&" + hostname
-    #                     self.addToModules(foundedModule)
-    #                     self.addToTypes(foundedModule)
                         self.emit(QtCore.SIGNAL("founded new module(QString)"), foundedModule)
                 except KeyError:
                     continue
@@ -283,9 +246,18 @@ class test(QtCore.QObject):
     def updateSpis(self,nowy):
         print "updateSpis"
         ip,hostname = str(nowy).split("&&")
-        nowy = esp(ip,hostname)
-        if nowy not in self.spis: self.spis.append(nowy)
-        print self.spis
+        ipList = [item.ip for item in self.spis]    
+        if ip not in ipList: 
+            nowy = esp(ip,hostname)
+            self.spis.append(nowy)
+        self.printSpisMAC()
+        self.printSpisIP()
+    def printSpisIP(self):
+        for item in self.spis:
+            print item.ip,
+    def printSpisMAC(self):
+        for item in self.spis:
+            print item.mac,
     def start(self):
         self.poszukiwacz.start()
     def done(self):

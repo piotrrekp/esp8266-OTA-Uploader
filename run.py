@@ -1,6 +1,6 @@
 from gui import *
 from PyQt4.QtGui import QFont
-from uploader import *
+from lib import *
 
 
 

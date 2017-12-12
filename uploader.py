@@ -20,7 +20,34 @@ class esp(object):
             self.type = "unknownType"
     def __str__(self):
         return self.type + self.ip
-            
+
+class espOnline(object):
+    
+    def __init__(self):
+        self.modules = []
+        self.types = {}
+        self.ipList = []
+
+    def addNew(self,newModule):
+        if newModule.ip not in self.ipList:
+            self.modules.append(newModule)
+            self.ipList.append(newModule.ip)
+        if newModule.type not in self.types:
+            self.types[newModule.type] = []
+            self.types[newModule.type].append(newModule)
+        elif newModule.ip not in self.types[newModule.type]:
+            self.types[newModule.type].append(newModule)
+    def getModules(self):
+        return self.modules
+    def getTypes(self):
+        return self.types.keys()
+    def getModulesWithType(self,type):
+        try:
+            return self.types[type]
+        except:
+            return []
+    def getIpList(self):
+        return self.ipList
 class uploader(object):
     def __init__(self):
         self.binFile = ""
@@ -214,69 +241,59 @@ class test(QtCore.QObject):
     class tthread(QtCore.QThread):
         def __init__(self):
             QtCore.QThread.__init__(self)
+            self.runningFlag = True
+            self.i = self.gen()
         def __del__(self):
             self.wait()
+        def gen(self):
+            max = 127
+            n = 0 
+            while n < max:
+                n += 1
+                yield n
+            
         def run(self):
-            time.sleep(1)
-            print "run"
-            nm = nmap.PortScanner()
-            port = "8266"
-            tag = ["MIC", "ESP"]
-#            ipRange = self.prepareIPrange()
-            ipRange = "192.168.1.1-127"
-            nm.scan(ipRange, port)
-            for ip in nm.all_hosts():
-                item = nm.scan(ip, port) 
-                try:
-                    hostname = item['scan'][ip]["hostnames"][0]['name']
-                    if hostname[:3] in tag:
-                        foundedModule  = ip + "&&" + hostname
-                        self.emit(QtCore.SIGNAL("founded new module(QString)"), foundedModule)
-                except KeyError:
-                    continue
-        
-
+            self.sleep(1)
+            try:
+                i = self.i.next()
+            except StopIteration:
+                self.i = self.gen()
+            self.emit(QtCore.SIGNAL("NewModule(PyQt_PyObject)"),i)
+            print "emit: ",i
+        def stop(self):
+            self.runningFlag = False
+    
     def __init__(self):
         QtCore.QObject.__init__(self)
         self.spis = []
         self.poszukiwacz = self.tthread()
-        self.connect(self.poszukiwacz,QtCore.SIGNAL("founded new module(QString)"), self.updateSpis)
+        self.connect(self.poszukiwacz,QtCore.SIGNAL("NewModule(PyQt_PyObject)"), self.updateSpis)
         self.connect(self.poszukiwacz,QtCore.SIGNAL("finished()"), self.done)
-    
+    def stop(self):
+        self.poszukiwacz.stop()
     def updateSpis(self,nowy):
         print "updateSpis"
-        ip,hostname = str(nowy).split("&&")
-        ipList = [item.ip for item in self.spis]    
-        if ip not in ipList: 
-            nowy = esp(ip,hostname)
+        if nowy not in self.spis:
             self.spis.append(nowy)
-        self.printSpisMAC()
-        self.printSpisIP()
-    def printSpisIP(self):
-        for item in self.spis:
-            print item.ip,
-    def printSpisMAC(self):
-        for item in self.spis:
-            print item.mac,
+        print self.spis
+    def getSpis(self):
+        return self.spis
     def start(self):
         self.poszukiwacz.start()
     def done(self):
         self.poszukiwacz.start()
         
 if __name__ == "__main__":
-#     
+    
 #     upl.searchModules(tag = ["MIC","ESP"])
 #     print len(upl.modules)
 #     upl.searchModules(tag = ["MIC","ESP"])
 #     print len(upl.modules)
 # 
 #     print upl.types
-
+  
     app = QtGui.QApplication(sys.argv)
     obj = test()
     obj.start()
-    
+    i = 0 
     sys.exit(app.exec_())
-
-   
-   

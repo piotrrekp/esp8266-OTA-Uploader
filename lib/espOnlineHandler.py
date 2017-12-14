@@ -134,13 +134,14 @@ class uploader(QtCore.QThread):
     def run(self):
         self.emitInfo("start uploading.")
         self.emitError("testowy error")
+        self.sleep(5)
         self.emitSuccess("testowy success")
 #         self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
-        
-        
         self.emitTerminated()
+        self.sleep(5)
         pass
-    
+    def finished(self):
+        self.emitTerminated()
     def emitInfo(self, msg):
         msg = str (self.esp) + ": " + msg
         logging.info(msg)
@@ -158,6 +159,7 @@ class uploader(QtCore.QThread):
         self.emit(QtCore.SIGNAL("success(PyQt_PyObject)"), msg)
     
     def emitTerminated(self):
+        print "emitTerminated(%i)" % self.threadID
         self.emit(QtCore.SIGNAL("exit(PyQt_PyObject)"),self.threadID)
         
     def getLocalIP(self):

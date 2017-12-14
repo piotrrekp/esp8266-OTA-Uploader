@@ -124,6 +124,7 @@ class StartQT4(QtGui.QMainWindow):
         i = 0
         for item in self.modulesToUpload:
             uploader = espOnlineHandler.uploader(item, self.binFile, i)
+            self.logInfo("thread number %d: %s" % (i,str(uploader)))
             self.uploaders[i] = uploader
             self.connect(uploader, QtCore.SIGNAL("error(PyQt_PyObject)"), self.logError)
             self.connect(uploader, QtCore.SIGNAL("info(PyQt_PyObject)"), self.logInfo)
@@ -138,8 +139,10 @@ class StartQT4(QtGui.QMainWindow):
             self.uploaders.pop(nr)
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
     def done(self):
-        self.logSuccess("Upload finished with SUCCESS!")    
+        print "done catched"
+        self.logSuccess("Upload finished with SUCCESS!")  
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
+        
     def checkUploaders(self):
         print "catched 'checkUploader' signal"
         for item in self.uploaders:

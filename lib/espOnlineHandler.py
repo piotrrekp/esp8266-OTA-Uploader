@@ -6,6 +6,8 @@ import logging
 import sys
 import time
 from PyQt4 import QtCore, QtGui
+import new
+from __builtin__ import file
 
 class esp(object):
     def __init__(self, ip, hostname, port = 8266):
@@ -15,11 +17,17 @@ class esp(object):
         self.port = port
         if hostname[:3] == "MIC":
             _, self.type,self.mac = hostname.split("_")
+            self.toStr = self.type + " " +  self.mac
+        elif hostname[:3] == "ESP":
+            self.type = "unknownType"
+            self.mac = "unknownMac"
+            self.toStr = hostname + " " + self.ip
         else: 
             self.mac = "unknownMAC"
             self.type = "unknownType"
+            self.toStr = "unknownModule" + " " + self.ip
     def __str__(self):
-        return self.type +" " +  self.ip
+        return self.toStr
 
 class espOnline(QtCore.QObject):
     def __init__(self):
@@ -37,14 +45,17 @@ class espOnline(QtCore.QObject):
     def addTag(self, tag):
         self.searcher.addTag(tag)
     def addNew(self,newModule):
-        if newModule not in self.modules:
-            self.modules.append(newModule)
+        if newModule.ip  not in self.ipList:
             self.ipList.append(newModule.ip)
-        if newModule.type not in self.types:
-            self.types[newModule.type] = []
-            self.types[newModule.type].append(newModule)
-        elif newModule.ip not in self.types[newModule.type]:
-            self.types[newModule.type].append(newModule)
+            self.modules.append(newModule)
+            self.emit(QtCore.SIGNAL("newModuleAdded()"))
+            if newModule.type == "unknownType": 
+                return
+            if newModule.type not in self.types:
+                self.types[newModule.type] = []
+                self.types[newModule.type].append(newModule)
+            elif newModule.ip not in self.types[newModule.type]:
+                self.types[newModule.type].append(newModule)
     def done(self):
         self.startSearching()
     def getModules(self):
@@ -100,38 +111,65 @@ class searchEspOnline(QtCore.QThread):
                 self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), foundedModule)
         except StopIteration:
             self.nextAvailableIP = self.genNextIp()
-            pass
         except KeyError:
-            print hostname
             pass
 
     def stop(self):
         self.runningFlag = False
-    
+        
+
 
 class uploader(QtCore.QThread):
-    def __init__(self, module, fileToUpload):
+    def __init__(self, module, fileToUpload, nr):
+        PORT = 13000
         QtCore.QThread.__init__(self)
+        self.threadID = nr
         self.binFile = fileToUpload
         self.esp = module
+        self.localPort = PORT + nr
+        
     def __del__(self):
         self.wait()
+        
     def run(self):
-        self.emitInfo("start uploading ")
+        self.emitInfo("start uploading.")
+        self.emitError("testowy error")
+        self.emitSuccess("testowy success")
+#         self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
+        
+        
+        self.emitTerminated()
         pass
     
     def emitInfo(self, msg):
+        msg = str (self.esp) + ": " + msg
         logging.info(msg)
         self.emit(QtCore.SIGNAL("info(PyQt_PyObject)"), msg)
     
     def emitError(self, msg):
+        msg = str (self.esp) + ": " + msg
         logging.info(msg)
         self.emit(QtCore.SIGNAL("error(PyQt_PyObject)"), msg)
         self.terminate()
     
     def emitSuccess(self, msg):
+        msg = str (self.esp) + ": " + msg
         logging.info(msg)
         self.emit(QtCore.SIGNAL("success(PyQt_PyObject)"), msg)
+    
+    def emitTerminated(self):
+        self.emit(QtCore.SIGNAL("exit(PyQt_PyObject)"),self.threadID)
+        
+    def getLocalIP(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('10.255.255.255',0))
+            IP = s.getsockname()[0] 
+        except:
+            self.getLocalIP()
+        finally:
+            s.close()
+        return IP
     
     def serve(self, remoteAddr, localAddr, remotePort, localPort, password, filename, command = 0):
         FLASH = 0
@@ -250,15 +288,34 @@ class uploader(QtCore.QThread):
             f.close()
         sock.close()
         self.emitSuccess("done")
+        self.emitTerminated()
         return 1
  
 
     
 if __name__ == "__main__":
+    
+    
     app = QtGui.QApplication(sys.argv)
-    spis = espOnline()
-    spis.addTag("MIC")
-    spis.startSearching()
+    moduly = espOnline()
+    nowy = esp("192.168.1.28", "MIC_THP_AA:BB:CC:DD:EE:FF")
+    
+    moduly.addNew(nowy)
+    nowy = esp("192.168.1.29", "ESP_AABBCSA")
+    
+    moduly.addNew(nowy)
+    nowy = esp("192.168.1.31", "MIC_THP_AA:BB:CC:DD:EE:FF")
+    moduly.addNew(nowy)
+    nowy = esp("192.168.1.31", "MIC_THP_UU:BB:CC:DD:EE:FF")
+    
+    moduly.addNew(nowy)
+    
+    print moduly.getTypesList()
+    
+    print "moduly THP: ", ",".join(map(str,moduly.getModulesWithType("THP")))
+    
+    print "wszystkie moduly: "," , ".join(map(str,moduly.getModules()))
+    
     sys.exit(app.exec_())
     
     

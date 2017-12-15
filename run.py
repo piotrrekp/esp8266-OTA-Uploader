@@ -100,7 +100,7 @@ class StartQT4(QtGui.QMainWindow):
         
             elif self.uploadMode == 2:
                 self.logSuccess("Modules type to upgrade firmware: %s" % (self.modulesToUpload[0].type))
-        
+        self.binFile = self.ui.filePath.text()
         if not self.binFile:
             errorSum += 1
             self.logError("File to upload not selected !!!")
@@ -125,13 +125,13 @@ class StartQT4(QtGui.QMainWindow):
         for item in self.modulesToUpload:
             uploader = espOnlineHandler.uploader(item, self.binFile, i)
             self.logInfo("thread number %d: %s" % (i,str(uploader)))
-            self.uploaders[i] = uploader
             self.connect(uploader, QtCore.SIGNAL("error(PyQt_PyObject)"), self.logError)
             self.connect(uploader, QtCore.SIGNAL("info(PyQt_PyObject)"), self.logInfo)
             self.connect(uploader, QtCore.SIGNAL("success(PyQt_PyObject)"), self.logSuccess)
             self.connect(uploader, QtCore.SIGNAL("exit(PyQt_PyObject)"), self.removeThread)
             self.connect(uploader, QtCore.SIGNAL("finished()"),self.done)
             uploader.start()
+            self.uploaders[i] = uploader
             i += 1
       
     def removeThread(self, nr):

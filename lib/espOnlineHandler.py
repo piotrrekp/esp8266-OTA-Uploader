@@ -1,4 +1,4 @@
-import socket
+import socket 
 import nmap
 import os
 import hashlib
@@ -129,19 +129,22 @@ class uploader(QtCore.QThread):
         self.localPort = PORT + nr
         
     def __del__(self):
+        self.quit()
         self.wait()
         
     def run(self):
+        print "start"
         self.emitInfo("start uploading.")
-        self.emitError("testowy error")
-        self.sleep(5)
+        print "start1"
         self.emitSuccess("testowy success")
-#         self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
-        self.emitTerminated()
+        print "start2 with: ", self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile
+        self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
+        print "start3"
         self.sleep(5)
-        pass
+        print "start4"
     def finished(self):
         self.emitTerminated()
+    
     def emitInfo(self, msg):
         msg = str (self.esp) + ": " + msg
         logging.info(msg)
@@ -178,12 +181,11 @@ class uploader(QtCore.QThread):
         SPIFFS = 100
         AUTH = 200
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_address = (localAddr, localPort)
+        server_address = (localAddr, int(localPort))
         try:
             sock.bind(server_address)
             sock.listen(1)
         except:
-            
             self.emitError("Listen Failed")
             return 1
     
@@ -191,10 +193,10 @@ class uploader(QtCore.QThread):
         f = open(filename,'rb')
         file_md5 = hashlib.md5(f.read()).hexdigest()
         f.close()
-        self.emitInfo('Upload size: %d', content_size)
-        message = '%d %d %d %s\n' % (command, localPort, content_size, file_md5)
+        self.emitInfo('Upload size: %d' % content_size)
+        message = '%d %d %d %s\n' % (command, int(localPort), content_size, file_md5)
         
-        self.emitInfo('Sending invitation to: %s', remoteAddr)
+        self.emitInfo('Sending invitation to: %s' % remoteAddr)
         
         sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         remote_address = (remoteAddr, int(remotePort))
@@ -270,13 +272,15 @@ class uploader(QtCore.QThread):
             try:
                 connection.settimeout(60)
                 data = connection.recv(32).decode()
-                self.emitInfo('Result: %s' ,data)
+                self.emitInfo('Result: %s' %data)
                 connection.close()
                 f.close()
                 sock.close()
                 if (data != "OK"):
-                    self.emitError('%s', data)
+                    self.emitError('%s' % data)
                     return 1;
+                self.emitSuccess("done")
+                self.emitTerminated()
                 return 0
             except:
                 connection.close()
@@ -289,34 +293,27 @@ class uploader(QtCore.QThread):
             connection.close()
             f.close()
         sock.close()
-        self.emitSuccess("done")
         self.emitTerminated()
         return 1
  
 
+def logError(msg):
+    print msg
     
+def done():
+    print "gotowe"    
 if __name__ == "__main__":
-    
     
     app = QtGui.QApplication(sys.argv)
     moduly = espOnline()
-    nowy = esp("192.168.1.28", "MIC_THP_AA:BB:CC:DD:EE:FF")
-    
-    moduly.addNew(nowy)
-    nowy = esp("192.168.1.29", "ESP_AABBCSA")
-    
-    moduly.addNew(nowy)
     nowy = esp("192.168.1.31", "MIC_THP_AA:BB:CC:DD:EE:FF")
-    moduly.addNew(nowy)
-    nowy = esp("192.168.1.31", "MIC_THP_UU:BB:CC:DD:EE:FF")
-    
-    moduly.addNew(nowy)
-    
-    print moduly.getTypesList()
-    
-    print "moduly THP: ", ",".join(map(str,moduly.getModulesWithType("THP")))
-    
-    print "wszystkie moduly: "," , ".join(map(str,moduly.getModules()))
+    binFile = "/home/piotrrek/MiconModulesBin/M2E.bin"
+    wrzucacz = uploader(nowy, binFile, 1)
+    app.connect(wrzucacz, QtCore.SIGNAL("error(PyQt_PyObject)"), logError)
+    app.connect(wrzucacz, QtCore.SIGNAL("info(PyQt_PyObject)"), logError)
+    app.connect(wrzucacz, QtCore.SIGNAL("success(PyQt_PyObject)"), logError)
+    app.connect(wrzucacz, QtCore.SIGNAL("finished()"), done)
+    wrzucacz.start()
     
     sys.exit(app.exec_())
     

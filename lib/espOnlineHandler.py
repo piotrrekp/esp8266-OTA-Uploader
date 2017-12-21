@@ -4,10 +4,7 @@ import os
 import hashlib
 import logging
 import sys
-import time
 from PyQt4 import QtCore, QtGui
-import new
-from __builtin__ import file
 
 class esp(object):
     def __init__(self, ip, hostname, port = 8266):
@@ -26,6 +23,11 @@ class esp(object):
             self.mac = "unknownMAC"
             self.type = "unknownType"
             self.toStr = "unknownModule" + " " + self.ip
+    def __eq__(self, module):
+        if self.ip == module.ip and self.mac == module.mac and self.type == module.type and self.port == module.port:
+            return True
+        else: return False
+        
     def __str__(self):
         return self.toStr
 
@@ -42,27 +44,39 @@ class espOnline(QtCore.QObject):
         self.searcher.start()
     def stopSearching(self):
         self.searcher.stop()
+        
     def addTag(self, tag):
         self.searcher.addTag(tag)
+        
     def addNew(self,newModule):
-        if newModule.ip  not in self.ipList:
-            self.ipList.append(newModule.ip)
-            self.modules.append(newModule)
-            self.emit(QtCore.SIGNAL("newModuleAdded()"))
-            if newModule.type == "unknownType": 
-                return
-            if newModule.type not in self.types:
-                self.types[newModule.type] = []
-                self.types[newModule.type].append(newModule)
-            elif newModule.ip not in self.types[newModule.type]:
-                self.types[newModule.type].append(newModule)
+        if newModule not in self.modules:
+            if newModule.ip not in self.ipList:
+                self.ipList.append(newModule.ip)
+                self.modules.append(newModule)
+                self.emit(QtCore.SIGNAL("newModuleAdded()"))
+                if newModule.type == "unknownType": 
+                    return
+                if newModule.type not in self.types:
+                    self.types[newModule.type] = []
+                    self.types[newModule.type].append(newModule)
+                elif newModule.ip not in self.types[newModule.type]:
+                    self.types[newModule.type].append(newModule)
+            else:
+                for item in self.modules:
+                    if item.ip == newModule.ip:
+                        self.modules.remove(item)
+                        self.modules.append(newModule)
+    
     def done(self):
         self.startSearching()
+    
     def getModules(self):
         return self.modules
+    
     def getTypesList(self):
         return self.types.keys()
-    def getModulesWithType(self,type):
+    
+    def getModulesWithType(self, type):
         try:
             return self.types[type]
         except:
@@ -90,6 +104,7 @@ class searchEspOnline(QtCore.QThread):
         finally:
             s.close()
         return IP
+    
     def prepareIPrange(self,searchingRange = "1-127"):
         ip = self.getLocalIP().split(".")
         ip[-1] = searchingRange
@@ -108,7 +123,7 @@ class searchEspOnline(QtCore.QThread):
             hostname = item['scan'][ip]["hostnames"][0]['name']
             if hostname[:3] in self.searchingTags:
                 foundedModule  = esp(ip, hostname)
-                self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), foundedModule)
+                self.emit(QtCore.SIGNAL("ne wModule(PyQt_PyObject)"), foundedModule)
         except StopIteration:
             self.nextAvailableIP = self.genNextIp()
         except KeyError:

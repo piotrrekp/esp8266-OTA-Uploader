@@ -1,7 +1,7 @@
 from gui import *
 from PyQt4.QtGui import QFont
 from lib import espOnlineHandler
-import  sys, os
+import sys, os
 from PyQt4.Qt import QString, QColor
     
 class StartQT4(QtGui.QMainWindow):
@@ -140,7 +140,8 @@ class StartQT4(QtGui.QMainWindow):
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
     def done(self):
         print "done catched"
-        self.logSuccess("Upload finished with SUCCESS!")  
+        self.logSuccess("Upload finished with SUCCESS!")
+#         self.updateAvailableEsp()
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
         
     def checkUploaders(self):

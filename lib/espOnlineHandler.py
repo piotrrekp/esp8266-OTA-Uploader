@@ -49,8 +49,6 @@ class espOnline(QtCore.QObject):
         self.searcher.addTag(tag)
         
     def addNew(self,newModule):
-        print "emit signal newModuleAdded"
-        self.emit(QtCore.SIGNAL("newModuleAdded()"))
         if newModule not in self.modules:
             if newModule.ip not in self.ipList:
                 self.ipList.append(newModule.ip)
@@ -107,7 +105,7 @@ class searchEspOnline(QtCore.QThread):
             s.close()
         return IP
     
-    def prepareIPrange(self,searchingRange = "1-127"):
+    def prepareIPrange(self,searchingRange = "1-253"):
         ip = self.getLocalIP().split(".")
         ip[-1] = searchingRange
         ip = ".".join(ip)
@@ -150,15 +148,8 @@ class uploader(QtCore.QThread):
         self.wait()
         
     def run(self):
-        print "start"
         self.emitInfo("start uploading.")
-        print "start1"
-        self.emitSuccess("testowy success")
-        print "start2 with: ", self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile
         self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
-        print "start3"
-        self.sleep(5)
-        print "start4"
     def finished(self):
         self.emitTerminated()
     
@@ -310,7 +301,6 @@ class uploader(QtCore.QThread):
             connection.close()
             f.close()
         sock.close()
-        self.emitTerminated()
         return 1
  
 

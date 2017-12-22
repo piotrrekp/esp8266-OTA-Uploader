@@ -1,7 +1,7 @@
 from gui import *
 from PyQt4.QtGui import QFont
 from lib import espOnlineHandler
-import sys, os
+import  sys, os
 from PyQt4.Qt import QString, QColor
     
 class StartQT4(QtGui.QMainWindow):
@@ -14,7 +14,7 @@ class StartQT4(QtGui.QMainWindow):
 
         self.ui = Ui_ESP8266Uploader()
         self.ui.setupUi(self)
-        
+#         self.ui.groupMode.setEnabled(False)
 
         self.setIcon()
         self.initSignals()
@@ -140,8 +140,7 @@ class StartQT4(QtGui.QMainWindow):
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
     def done(self):
         print "done catched"
-        self.logSuccess("Upload finished with SUCCESS!")
-#         self.updateAvailableEsp()
+        self.logSuccess("Upload finished with SUCCESS!")  
         self.emit(QtCore.SIGNAL("checkUploadersList()"))
         
     def checkUploaders(self):

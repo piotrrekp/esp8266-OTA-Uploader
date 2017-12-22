@@ -49,6 +49,8 @@ class espOnline(QtCore.QObject):
         self.searcher.addTag(tag)
         
     def addNew(self,newModule):
+        print "emit signal newModuleAdded"
+        self.emit(QtCore.SIGNAL("newModuleAdded()"))
         if newModule not in self.modules:
             if newModule.ip not in self.ipList:
                 self.ipList.append(newModule.ip)
@@ -123,7 +125,7 @@ class searchEspOnline(QtCore.QThread):
             hostname = item['scan'][ip]["hostnames"][0]['name']
             if hostname[:3] in self.searchingTags:
                 foundedModule  = esp(ip, hostname)
-                self.emit(QtCore.SIGNAL("ne wModule(PyQt_PyObject)"), foundedModule)
+                self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), foundedModule)
         except StopIteration:
             self.nextAvailableIP = self.genNextIp()
         except KeyError:

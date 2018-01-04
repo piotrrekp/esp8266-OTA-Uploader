@@ -352,8 +352,8 @@ class Ui_ESP8266Uploader(QtCore.QObject):
 
     def retranslateUi(self, ESP8266Uploader):
         ESP8266Uploader.setWindowTitle(_translate("ESP8266Uploader", "MainWindow", None))
-        self.singleMode.setText(_translate("ESP8266Uploader", "Signle Module", None))
+        self.singleMode.setText(_translate("ESP8266Uploader", "Pojedynczy modul", None))
         self.groupMode.setText(_translate("ESP8266Uploader", "Group of modules", None))
         self.searchFilePath.setText(_translate("ESP8266Uploader", "...", None))
-        self.uploadButton.setText(_translate("ESP8266Uploader", "Upload", None))
+        self.uploadButton.setText(_translate("ESP8266Uploader", "Wgraj", None))
 

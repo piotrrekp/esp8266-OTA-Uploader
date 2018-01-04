@@ -1,147 +1,84 @@
+# -*- coding: utf-8 -*-
+
 import socket 
 import nmap
 import os
 import hashlib
 import logging
 import sys
-import time
 from PyQt4 import QtCore, QtGui
-import new
-from __builtin__ import file
+PORT = 8266
 
 class esp(object):
-    def __init__(self, ip, hostname, port = 8266):
-        self.ip = ip
-        self.mac = ""
-        self.type = ""
-        self.port = port
-        if hostname[:3] == "MIC":
-            _, self.type,self.mac = hostname.split("_")
-            self.toStr = self.type + " " +  self.mac
-        elif hostname[:3] == "ESP":
-            self.type = "unknownType"
-            self.mac = "unknownMac"
-            self.toStr = hostname + " " + self.ip
-        else: 
-            self.mac = "unknownMAC"
-            self.type = "unknownType"
-            self.toStr = "unknownModule" + " " + self.ip
+    def __init__(self, data ):
+        self.ip = data["ipv4"]
+        self.mac = data["mac"]
+        self.port = PORT
+        
+    def __eq__(self, module):
+        if self.mac == module.mac:
+            return True
+        else: return False
+        
     def __str__(self):
-        return self.toStr
+        return self.ip
 
 class espOnline(QtCore.QObject):
     def __init__(self):
         QtCore.QObject.__init__(self)
-        self.modules = []
-        self.types = {}
-        self.ipList = []
+        self.modules = {}
         self.searcher = searchEspOnline()
         self.connect(self.searcher, QtCore.SIGNAL("newModule(PyQt_PyObject)"), self.addNew)
         self.connect(self.searcher, QtCore.SIGNAL("finished()"), self.done)
+    
     def startSearching(self):
         self.searcher.start()
+        
     def stopSearching(self):
         self.searcher.stop()
-    def addTag(self, tag):
-        self.searcher.addTag(tag)
+        
     def addNew(self,newModule):
-        if newModule.ip  not in self.ipList:
-            self.ipList.append(newModule.ip)
-            self.modules.append(newModule)
+        if newModule["mac"] not in self.modules:
+            self.modules[newModule["mac"]] = newModule["ipv4"]
             self.emit(QtCore.SIGNAL("newModuleAdded()"))
-            if newModule.type == "unknownType": 
-                return
-            if newModule.type not in self.types:
-                self.types[newModule.type] = []
-                self.types[newModule.type].append(newModule)
-            elif newModule.ip not in self.types[newModule.type]:
-                self.types[newModule.type].append(newModule)
+    
     def done(self):
         self.startSearching()
+    
     def getModules(self):
         return self.modules
+    
     def getTypesList(self):
         return self.types.keys()
-    def getModulesWithType(self,type):
+    
+    def getModulesWithType(self, type):
         try:
             return self.types[type]
         except:
             return []
+        
     def getIpList(self):
         return self.ipList
     
-class searchEspOnline(QtCore.QThread):
-    def __init__(self):
-            QtCore.QThread.__init__(self)
-            
-            self.searchingTags = ["ESP"]
-            self.searchingPort =  "8266"
-            self.scanner = nmap.PortScanner()
-            self.nextAvailableIP = self.genNextIp()
-    def __del__(self):
-        self.wait()
-    def getLocalIP(self):
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('10.255.255.255',0))
-            IP = s.getsockname()[0] 
-        except:
-            self.getLocalIP()
-        finally:
-            s.close()
-        return IP
-    def prepareIPrange(self,searchingRange = "1-127"):
-        ip = self.getLocalIP().split(".")
-        ip[-1] = searchingRange
-        ip = ".".join(ip)
-        return ip
-    def addTag(self,tag):
-        self.searchingTags.append(tag)
-    def genNextIp(self):   
-        self.scanner.scan(self.prepareIPrange(), self.searchingPort)
-        for item in self.scanner.all_hosts():
-            yield item
-    def run(self):
-        try:
-            ip = self.nextAvailableIP.next()
-            item = self.scanner.scan(ip, self.searchingPort)
-            hostname = item['scan'][ip]["hostnames"][0]['name']
-            if hostname[:3] in self.searchingTags:
-                foundedModule  = esp(ip, hostname)
-                self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), foundedModule)
-        except StopIteration:
-            self.nextAvailableIP = self.genNextIp()
-        except KeyError:
-            pass
-
-    def stop(self):
-        self.runningFlag = False
-        
-
 
 class uploader(QtCore.QThread):
     def __init__(self, module, fileToUpload, nr):
-        PORT = 13000
+        sendingPORT = 13000
         QtCore.QThread.__init__(self)
         self.threadID = nr
         self.binFile = fileToUpload
         self.esp = module
-        self.localPort = PORT + nr
+        self.localPort = sendingPORT + nr
         
     def __del__(self):
         self.quit()
         self.wait()
         
     def run(self):
-        print "start"
         self.emitInfo("start uploading.")
-        print "start1"
-        self.emitSuccess("testowy success")
-        print "start2 with: ", self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile
-        self.serve(self.esp.ip, self.getLocalIP(), self.esp.port, str(self.localPort), "", self.binFile)
-        print "start3"
-        self.sleep(5)
-        print "start4"
+        ip = str(self.esp).split('@')[1]
+        print ip
+        self.serve(str(ip), self.getLocalIP(), str(PORT), str(self.localPort), "", str(self.binFile))
     def finished(self):
         self.emitTerminated()
     
@@ -293,7 +230,6 @@ class uploader(QtCore.QThread):
             connection.close()
             f.close()
         sock.close()
-        self.emitTerminated()
         return 1
  
 
@@ -301,20 +237,70 @@ def logError(msg):
     print msg
     
 def done():
-    print "gotowe"    
+    print "gotowe"
+    
+    
+class searchEspOnline(QtCore.QThread):
+    def __init__(self):
+            QtCore.QThread.__init__(self)
+            
+            self.searchingTags = ["ESP", "MIC", "mic"]
+            self.searchingPort =  "8266"
+            self.scanner = nmap.PortScanner()
+            self.nextAvailableIP = self.genNextIp()
+            self.myIP = self.getLocalIP()
+    def __del__(self):
+        self.wait()
+    def getLocalIP(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('10.255.255.255',0))
+            IP = s.getsockname()[0] 
+        except:
+            self.getLocalIP()
+        finally:
+            s.close()
+        return IP
+    
+    def prepareIPrange(self,searchingRange = "1-255"):
+        ip = self.getLocalIP().split(".")
+        ip[-1] = searchingRange
+        ip = ".".join(ip)
+        return ip
+    def addTag(self,tag):
+        self.searchingTags.append(tag)
+    def genNextIp(self):   
+        self.scanner.scan(self.prepareIPrange(), self.searchingPort)
+        print self.scanner.all_hosts()
+        for item in self.scanner.all_hosts():
+            if item == self.myIP: continue
+            yield item
+    def run(self):
+        while True:
+            try:
+                ip = self.nextAvailableIP.next()
+                print ip
+                item = self.scanner.scan(ip, self.searchingPort, "-O", True)
+                info =  item['scan'][ip]["addresses"]
+                self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), info)
+    
+            except StopIteration:
+                self.nextAvailableIP = self.genNextIp()
+                
+            except KeyError:
+                pass
+
+    def stop(self):
+        self.runningFlag = False
+
+        
+
 if __name__ == "__main__":
     
     app = QtGui.QApplication(sys.argv)
-    moduly = espOnline()
-    nowy = esp("192.168.1.31", "MIC_THP_AA:BB:CC:DD:EE:FF")
-    binFile = "/home/piotrrek/MiconModulesBin/M2E.bin"
-    wrzucacz = uploader(nowy, binFile, 1)
-    app.connect(wrzucacz, QtCore.SIGNAL("error(PyQt_PyObject)"), logError)
-    app.connect(wrzucacz, QtCore.SIGNAL("info(PyQt_PyObject)"), logError)
-    app.connect(wrzucacz, QtCore.SIGNAL("success(PyQt_PyObject)"), logError)
-    app.connect(wrzucacz, QtCore.SIGNAL("finished()"), done)
-    wrzucacz.start()
-    
+    searcher = searchEspOnline()
+    print searcher.start()
+    print("gotowe")
     sys.exit(app.exec_())
     
     

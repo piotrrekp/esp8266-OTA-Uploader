@@ -57,19 +57,19 @@ class StartQT4(QtGui.QMainWindow):
         
     def logInfo(self,msg):
         self.ui.logger.setFontWeight(50)
-        self.ui.logger.setColor(QColor("white"))
+#         self.ui.logger.setColor(QColor("white"))
         self.ui.logger.append(msg)
     
     def logError(self,msg):
         self.ui.logger.setFontWeight(90)
-        self.ui.logger.setColor(QColor("red"))
+#         self.ui.logger.setColor(QColor("red"))
         self.ui.logger.append(msg)
         self.ui.listOfModules.clear()
         self.modulesToUpload = []
         self.ui.uploadButton.setEnabled(True)
     def logSuccess(self,msg):
         self.ui.logger.setFontWeight(64)
-        self.ui.logger.setColor(QColor("green"))
+#         self.ui.logger.setColor(QColor("green"))
         self.ui.logger.append(msg)
         
     def clickedSignleModule(self,state):

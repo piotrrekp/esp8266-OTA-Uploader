@@ -5,7 +5,7 @@ import nmap
 import os
 import hashlib
 import logging
-import sys
+import sys, os
 from PyQt4 import QtCore, QtGui
 PORT = 8266
 
@@ -280,7 +280,10 @@ class searchEspOnline(QtCore.QThread):
             try:
                 ip = self.nextAvailableIP.next()
                 print ip
-                item = self.scanner.scan(ip, self.searchingPort, "-O", True)
+                if os.name == "posix":
+                    item = self.scanner.scan(ip, self.searchingPort, "-O", True)
+                else: 
+                    item = self.scanner.scan(ip, self.searchingPort, "-O")
                 info =  item['scan'][ip]["addresses"]
                 self.emit(QtCore.SIGNAL("newModule(PyQt_PyObject)"), info)
     

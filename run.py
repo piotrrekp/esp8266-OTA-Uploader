@@ -46,6 +46,8 @@ class StartQT4(QtGui.QMainWindow):
         self.modulesToUpload = []
         if self.uploadMode == 1:
             module = self.ui.listOfModules.itemData(nr).toPyObject()
+            print module
+            print type(module)
             self.modulesToUpload = [module]
             self.logInfo("Selected module: %s" % ( str(module)))
         elif self.uploadMode == 2:
@@ -154,7 +156,6 @@ class StartQT4(QtGui.QMainWindow):
     def initSearcher(self):
         self.logInfo("Start searching available modules")
         self.searcher = espOnlineHandler.espOnline()
-        self.searcher.addTag("MIC")
         self.connect(self.searcher, QtCore.SIGNAL("newModuleAdded()"), self.addNewModule)
         self.searcher.startSearching()
     
@@ -169,7 +170,8 @@ class StartQT4(QtGui.QMainWindow):
                 self.ui.listOfModules.addItem(item,QtCore.QVariant(self.searcher.getModulesWithType(item)))
         elif self.uploadMode == 1:
             for item in self.searcher.modules:
-                self.ui.listOfModules.addItem(str(item),QtCore.QVariant(item))
+                module = item + " @ " + self.searcher.modules[item]
+                self.ui.listOfModules.addItem(module, QtCore.QVariant(module))
             if not self.modulesToUpload:
                 self.modulesToUpload.append(self.ui.listOfModules.itemData(0).toPyObject())
         self.ui.listOfModules.update()

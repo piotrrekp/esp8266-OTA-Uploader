@@ -35,4 +35,19 @@ class espOnlineTest(unittest.TestCase):
         self.assertEquals(self.module1 in moduleList, False)
 
 if __name__ == "__main__":
-    unittest.main()
+#     unittest.main()
+    
+    
+    with open("/home/piotrrek/1", "r") as f:
+        scan = f.readline()
+        for item in [',','{','}']:
+            scan = scan.replace(item, "\n")
+        print(scan)
+    with open("/home/piotrrek/3", "w") as f:
+        for line in scan.split("\n"):
+            if "'addresses':" in line:
+                
+    
+    
+    
+    
